@@ -34,21 +34,7 @@ func Run(ctx context.Context, opath, npath string, opt Opt) (string, error) {
 		return "", fmt.Errorf("unmarshalling the new schema: %v", err)
 	}
 
-	// Building rego module
-	var regoModule string
-	for _, name := range opt.Rules {
-		rule, ok := Rules[name]
-		if !ok {
-			return "", fmt.Errorf("undefined rule: %s", name)
-		}
-		regoModule += buildRule(rule.Expr)
-	}
-	if opt.CustomRuleContent != "" {
-		regoModule += buildRule(opt.CustomRuleContent)
-	}
-	regoModule = buildRegoModule(regoModule)
-
-	bcs, err := Filter(ctx, Compare(&osch, &nsch), regoModule)
+	bcs, err := run(ctx, osch, nsch, opt)
 	if err != nil {
 		return "", err
 	}
@@ -58,4 +44,22 @@ func Run(ctx context.Context, opath, npath string, opt Opt) (string, error) {
 		output = append(output, c.String())
 	}
 	return strings.Join(output, "\n"), nil
+}
+
+func run(ctx context.Context, osch, nsch schema.ProviderSchema, opt Opt) ([]Change, error) {
+	// Building rego module
+	var regoModule string
+	for _, name := range opt.Rules {
+		rule, ok := Rules[name]
+		if !ok {
+			return nil, fmt.Errorf("undefined rule: %s", name)
+		}
+		regoModule += buildRule(rule.Expr)
+	}
+	if opt.CustomRuleContent != "" {
+		regoModule += buildRule(opt.CustomRuleContent)
+	}
+	regoModule = buildRegoModule(regoModule)
+
+	return Filter(ctx, Compare(&osch, &nsch), regoModule)
 }
