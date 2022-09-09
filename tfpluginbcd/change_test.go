@@ -89,7 +89,7 @@ func TestChangeString(t *testing.T) {
 		{
 			name: "Data Source attribute add",
 			change: AttributeChange{
-				Scope: DataSourceScope{Type: "foo_resource"},
+				Scope: ResourceScope{Type: "foo_resource", IsDataSource: true},
 				Path:  []string{"foo", "bar"},
 				IsAdd: true,
 			},
@@ -191,7 +191,7 @@ func TestChangeString(t *testing.T) {
 		{
 			name: "Data Source block add",
 			change: BlockChange{
-				Scope: DataSourceScope{Type: "foo_resource"},
+				Scope: ResourceScope{Type: "foo_resource", IsDataSource: true},
 				Path:  []string{"foo", "bar"},
 				IsAdd: true,
 			},

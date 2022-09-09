@@ -55,15 +55,9 @@ func compareResources(orm, nrm map[string]*schema.Resource, isDataSource bool) [
 			})
 		}
 		// Inner
-		var scope Scope
-		if isDataSource {
-			scope = DataSourceScope{
-				Type: rt,
-			}
-		} else {
-			scope = ResourceScope{
-				Type: rt,
-			}
+		scope := ResourceScope{
+			Type:         rt,
+			IsDataSource: isDataSource,
 		}
 		changes = append(changes, compareBlock(scope, []string{}, ores.Block, nres.Block)...)
 	}

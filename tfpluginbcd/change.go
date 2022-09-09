@@ -83,16 +83,11 @@ type ProviderScope struct{}
 func (ProviderScope) isScope() {}
 
 type ResourceScope struct {
-	Type string
+	Type         string
+	IsDataSource bool
 }
 
 func (ResourceScope) isScope() {}
-
-type DataSourceScope struct {
-	Type string
-}
-
-func (DataSourceScope) isScope() {}
 
 type AttributeChange struct {
 	Scope
@@ -121,9 +116,11 @@ func (c AttributeChange) String() string {
 	case ProviderScope:
 		msg += " provider config"
 	case ResourceScope:
-		msg += " resource " + scope.Type
-	case DataSourceScope:
-		msg += " data source " + scope.Type
+		if scope.IsDataSource {
+			msg += " data source " + scope.Type
+		} else {
+			msg += " resource " + scope.Type
+		}
 	}
 
 	msg += " is"
@@ -167,9 +164,11 @@ func (c BlockChange) String() string {
 	case ProviderScope:
 		msg += " provider config"
 	case ResourceScope:
-		msg += " resource " + scope.Type
-	case DataSourceScope:
-		msg += " data source " + scope.Type
+		if scope.IsDataSource {
+			msg += " data source " + scope.Type
+		} else {
+			msg += " resource " + scope.Type
+		}
 	}
 
 	msg += " is"
@@ -205,14 +204,6 @@ func (m ResourceModify) String() string {
 		l = append(l, fmt.Sprintf("schema version: %d -> %d", m.SchemaVersion.From, m.SchemaVersion.To))
 	}
 	return strings.Join(l, ", ")
-}
-
-type DataSource struct {
-	SchemaVersion int
-}
-
-type DataSourceModify struct {
-	SchemaVersion *Modification[int]
 }
 
 type Attribute struct {

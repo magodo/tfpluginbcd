@@ -640,7 +640,7 @@ func TestCompare(t *testing.T) {
 			},
 			expect: []Change{
 				AttributeChange{
-					Scope:    DataSourceScope{Type: "foo_resource"},
+					Scope:    ResourceScope{Type: "foo_resource", IsDataSource: true},
 					Path:     []string{"old_only_attr"},
 					IsDelete: true,
 				},
