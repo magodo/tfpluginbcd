@@ -1,6 +1,7 @@
 package tfpluginbcd
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -14,10 +15,19 @@ type Change interface {
 	String() string
 }
 
+type ChangeKind string
+
+const (
+	ChangeKindProvider  ChangeKind = "provider"
+	ChangeKindResource  ChangeKind = "resource"
+	ChangeKindAttribute ChangeKind = "attribute"
+	ChangeKindBlock     ChangeKind = "block"
+)
+
 type ProviderChange struct {
 	// Exactly one of them is true
-	IsAdd    bool
-	IsDelete bool
+	IsAdd    bool `json:"is_add"`
+	IsDelete bool `json:"is_delete"`
 }
 
 func (ProviderChange) isChange() {}
@@ -33,21 +43,28 @@ func (c ProviderChange) String() string {
 	return fmt.Sprintf("Provider config is %s", verb)
 }
 
+func (c ProviderChange) MarshalJSON() ([]byte, error) {
+	type alias ProviderChange
+	return injectMarshal(alias(c), func(m map[string]interface{}) {
+		m["kind"] = ChangeKindProvider
+	})
+}
+
 type ResourceChange struct {
 	// Resource type
-	Type         string
-	IsDataSource bool
+	Type         string `json:"type"`
+	IsDataSource bool   `json:"is_data_source"`
 
 	// Exactly one of them is true
-	IsAdd    bool
-	IsDelete bool
-	IsModify bool
+	IsAdd    bool `json:"is_add"`
+	IsDelete bool `json:"is_delete"`
+	IsModify bool `json:"is_modify"`
 
 	// Current represents the current schema of this resource, it is nil if IsDelete is true.
-	Current *Resource
+	Current *Resource `json:"current,omitempty"`
 
 	// Modification represents the modification of this resource, it is non-nil only when IsModify is true.
-	Modification *ResourceModify
+	Modification *ResourceModify `json:"modification,omitempty"`
 }
 
 func (ResourceChange) isChange() {}
@@ -74,35 +91,63 @@ func (c ResourceChange) String() string {
 	return msg
 }
 
+func (c ResourceChange) MarshalJSON() ([]byte, error) {
+	type alias ResourceChange
+	return injectMarshal(alias(c), func(m map[string]interface{}) {
+		m["kind"] = ChangeKindResource
+	})
+}
+
 type Scope interface {
 	isScope()
 }
+
+type ScopeKind string
+
+const (
+	ScopeKindProvider ScopeKind = "provider"
+	ScopeKindResource ScopeKind = "resource"
+)
 
 type ProviderScope struct{}
 
 func (ProviderScope) isScope() {}
 
+func (s ProviderScope) MarshalJSON() ([]byte, error) {
+	type alias ProviderScope
+	return injectMarshal(alias(s), func(m map[string]interface{}) {
+		m["kind"] = ScopeKindProvider
+	})
+}
+
 type ResourceScope struct {
-	Type         string
-	IsDataSource bool
+	Type         string `json:"type"`
+	IsDataSource bool   `json:"is_data_source"`
 }
 
 func (ResourceScope) isScope() {}
 
+func (s ResourceScope) MarshalJSON() ([]byte, error) {
+	type alias ResourceScope
+	return injectMarshal(alias(s), func(m map[string]interface{}) {
+		m["kind"] = ScopeKindResource
+	})
+}
+
 type AttributeChange struct {
-	Scope
-	Path []string
+	Scope `json:"scope"`
+	Path  []string `json:"path"`
 
 	// Exactly one of them is true
-	IsAdd    bool
-	IsDelete bool
-	IsModify bool
+	IsAdd    bool `json:"is_add"`
+	IsDelete bool `json:"is_delete"`
+	IsModify bool `json:"is_modify"`
 
 	// Current represents the current schema of this attribute, it is nil if IsDelete is true.
-	Current *Attribute
+	Current *Attribute `json:"current,omitempty"`
 
 	// Modification represents the modification of this attribute, it is non-nil only when IsModify is true.
-	Modification *AttributeModify
+	Modification *AttributeModify `json:"modification,omitempty"`
 }
 
 func (AttributeChange) isChange() {}
@@ -137,20 +182,27 @@ func (c AttributeChange) String() string {
 	return msg
 }
 
+func (c AttributeChange) MarshalJSON() ([]byte, error) {
+	type alias AttributeChange
+	return injectMarshal(alias(c), func(m map[string]interface{}) {
+		m["kind"] = ChangeKindAttribute
+	})
+}
+
 type BlockChange struct {
-	Scope
-	Path []string
+	Scope `json:"scope"`
+	Path  []string `json:"path"`
 
 	// Exactly one of them is true
-	IsAdd    bool
-	IsDelete bool
-	IsModify bool
+	IsAdd    bool `json:"is_add"`
+	IsDelete bool `json:"is_delete"`
+	IsModify bool `json:"is_modify"`
 
 	// Current represents the current schema of this block, it is nil if IsDelete is true.
-	Current *Block
+	Current *Block `json:"current,omitempty"`
 
 	// Modification represents the modification of this block, it is non-nil only when IsModify is true.
-	Modification *BlockModify
+	Modification *BlockModify `json:"modification,omitempty"`
 }
 
 func (BlockChange) isChange() {}
@@ -185,17 +237,24 @@ func (c BlockChange) String() string {
 	return msg
 }
 
+func (c BlockChange) MarshalJSON() ([]byte, error) {
+	type alias BlockChange
+	return injectMarshal(alias(c), func(m map[string]interface{}) {
+		m["kind"] = ChangeKindBlock
+	})
+}
+
 type Modification[T any] struct {
-	From T
-	To   T
+	From T `json:"from"`
+	To   T `json:"to"`
 }
 
 type Resource struct {
-	SchemaVersion int
+	SchemaVersion int `json:"schema_version"`
 }
 
 type ResourceModify struct {
-	SchemaVersion *Modification[int]
+	SchemaVersion *Modification[int] `json:"schema_version,omitempty"`
 }
 
 func (m ResourceModify) String() string {
@@ -207,31 +266,31 @@ func (m ResourceModify) String() string {
 }
 
 type Attribute struct {
-	Type          cty.Type
-	Required      bool
-	Optional      bool
-	Computed      bool
-	ForceNew      bool
-	Default       interface{}
-	Sensitive     bool
-	ConflictsWith []string
-	ExactlyOneOf  []string
-	AtLeastOneOf  []string
-	RequiredWith  []string
+	Type          cty.Type    `json:"type"`
+	Required      bool        `json:"required"`
+	Optional      bool        `json:"optional"`
+	Computed      bool        `json:"computed"`
+	ForceNew      bool        `json:"force_new"`
+	Default       interface{} `json:"default"`
+	Sensitive     bool        `json:"sensitive"`
+	ConflictsWith []string    `json:"conflicts_with"`
+	ExactlyOneOf  []string    `json:"exactly_one_of"`
+	AtLeastOneOf  []string    `json:"at_least_one_of"`
+	RequiredWith  []string    `json:"required_with"`
 }
 
 type AttributeModify struct {
-	Type          *Modification[cty.Type]
-	Required      *Modification[bool]
-	Optional      *Modification[bool]
-	Computed      *Modification[bool]
-	ForceNew      *Modification[bool]
-	Default       *Modification[any]
-	Sensitive     *Modification[bool]
-	ConflictsWith *Modification[[]string]
-	RequiredWith  *Modification[[]string]
-	ExactlyOneOf  *Modification[[]string]
-	AtLeastOneOf  *Modification[[]string]
+	Type          *Modification[cty.Type] `json:"type,omitempty"`
+	Required      *Modification[bool]     `json:"required,omitempty"`
+	Optional      *Modification[bool]     `json:"optional,omitempty"`
+	Computed      *Modification[bool]     `json:"computed,omitempty"`
+	ForceNew      *Modification[bool]     `json:"force_new,omitempty"`
+	Default       *Modification[any]      `json:"default,omitempty"`
+	Sensitive     *Modification[bool]     `json:"sensitive,omitempty"`
+	ConflictsWith *Modification[[]string] `json:"conflicts_with,omitempty"`
+	RequiredWith  *Modification[[]string] `json:"required_with,omitempty"`
+	ExactlyOneOf  *Modification[[]string] `json:"exactly_one_of,omitempty"`
+	AtLeastOneOf  *Modification[[]string] `json:"at_least_one_of,omitempty"`
 }
 
 func (m AttributeModify) String() string {
@@ -273,31 +332,31 @@ func (m AttributeModify) String() string {
 }
 
 type Block struct {
-	NestingMode   schema.NestingMode
-	Required      bool
-	Optional      bool
-	Computed      bool
-	ForceNew      bool
-	ConflictsWith []string
-	ExactlyOneOf  []string
-	AtLeastOneOf  []string
-	RequiredWith  []string
-	MinItems      int
-	MaxItems      int
+	NestingMode   schema.NestingMode `json:"nesting_mode"`
+	Required      bool               `json:"required"`
+	Optional      bool               `json:"optional"`
+	Computed      bool               `json:"computed"`
+	ForceNew      bool               `json:"force_new"`
+	ConflictsWith []string           `json:"conflicts_with"`
+	ExactlyOneOf  []string           `json:"exactly_one_of"`
+	AtLeastOneOf  []string           `json:"at_least_one_of"`
+	RequiredWith  []string           `json:"required_with"`
+	MinItems      int                `json:"min_items"`
+	MaxItems      int                `json:"max_items"`
 }
 
 type BlockModify struct {
-	NestingMode   *Modification[schema.NestingMode]
-	Required      *Modification[bool]
-	Optional      *Modification[bool]
-	Computed      *Modification[bool]
-	ForceNew      *Modification[bool]
-	ConflictsWith *Modification[[]string]
-	ExactlyOneOf  *Modification[[]string]
-	AtLeastOneOf  *Modification[[]string]
-	RequiredWith  *Modification[[]string]
-	MinItems      *Modification[int]
-	MaxItems      *Modification[int]
+	NestingMode   *Modification[schema.NestingMode] `json:"nesting_mode,omitempty"`
+	Required      *Modification[bool]               `json:"required,omitempty"`
+	Optional      *Modification[bool]               `json:"optional,omitempty"`
+	Computed      *Modification[bool]               `json:"computed,omitempty"`
+	ForceNew      *Modification[bool]               `json:"force_new,omitempty"`
+	ConflictsWith *Modification[[]string]           `json:"conflicts_with,omitempty"`
+	ExactlyOneOf  *Modification[[]string]           `json:"exactly_one_of,omitempty"`
+	AtLeastOneOf  *Modification[[]string]           `json:"at_least_one_of,omitempty"`
+	RequiredWith  *Modification[[]string]           `json:"required_with,omitempty"`
+	MinItems      *Modification[int]                `json:"min_items,omitempty"`
+	MaxItems      *Modification[int]                `json:"max_items,omitempty"`
 }
 
 func (m BlockModify) String() string {
@@ -548,4 +607,17 @@ func NewBlockModify(oblk schema.NestedBlock, nblk schema.NestedBlock) *BlockModi
 		return nil
 	}
 	return ret
+}
+
+func injectMarshal(v interface{}, f func(m map[string]interface{})) ([]byte, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	m := map[string]interface{}{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil, err
+	}
+	f(m)
+	return json.Marshal(m)
 }
