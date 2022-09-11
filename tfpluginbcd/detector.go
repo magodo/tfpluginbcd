@@ -2,6 +2,7 @@ package tfpluginbcd
 
 import (
 	"github.com/magodo/tfpluginschema/schema"
+	"golang.org/x/exp/slices"
 )
 
 func Compare(oldSch, newSch *schema.ProviderSchema) []Change {
@@ -26,7 +27,8 @@ func Compare(oldSch, newSch *schema.ProviderSchema) []Change {
 
 func compareResources(orm, nrm map[string]*schema.Resource, isDataSource bool) []Change {
 	var changes []Change
-	for rt, ores := range orm {
+	for _, rt := range mapSortedKeys(orm) {
+		ores := orm[rt]
 		nres, ok := nrm[rt]
 		// Delete
 		if !ok {
@@ -62,7 +64,8 @@ func compareResources(orm, nrm map[string]*schema.Resource, isDataSource bool) [
 		changes = append(changes, compareBlock(scope, []string{}, ores.Block, nres.Block)...)
 	}
 
-	for rt, nres := range nrm {
+	for _, rt := range mapSortedKeys(nrm) {
+		nres := nrm[rt]
 		// Add
 		if _, ok := orm[rt]; !ok {
 			changes = append(changes, ResourceChange{
@@ -83,20 +86,24 @@ func compareResources(orm, nrm map[string]*schema.Resource, isDataSource bool) [
 func compareBlock(scope Scope, path []string, oblk, nblk *schema.Block) []Change {
 	var changes []Change
 
-	for name, oattr := range oblk.Attributes {
+	for _, name := range mapSortedKeys(oblk.Attributes) {
+		oattr := oblk.Attributes[name]
 		changes = append(changes, compareAttribute(scope, append(path, name), oattr, nblk.Attributes[name])...)
 	}
-	for name, nattr := range nblk.Attributes {
+	for _, name := range mapSortedKeys(nblk.Attributes) {
+		nattr := nblk.Attributes[name]
 		if _, ok := oblk.Attributes[name]; ok {
 			continue
 		}
 		changes = append(changes, compareAttribute(scope, append(path, name), nil, nattr)...)
 	}
 
-	for name, oNestBlk := range oblk.NestedBlocks {
+	for _, name := range mapSortedKeys(oblk.NestedBlocks) {
+		oNestBlk := oblk.NestedBlocks[name]
 		changes = append(changes, compareNestedBlock(scope, append(path, name), oNestBlk, nblk.NestedBlocks[name])...)
 	}
-	for name, nNestBlk := range nblk.NestedBlocks {
+	for _, name := range mapSortedKeys(nblk.NestedBlocks) {
+		nNestBlk := nblk.NestedBlocks[name]
 		if _, ok := oblk.NestedBlocks[name]; ok {
 			continue
 		}
@@ -177,4 +184,13 @@ func compareNestedBlock(scope Scope, path []string, oblk, nblk *schema.NestedBlo
 
 	changes = append(changes, compareBlock(scope, path, oblk.Block, nblk.Block)...)
 	return changes
+}
+
+func mapSortedKeys[T any](m map[string]T) []string {
+	var keys []string
+	for key := range m {
+		keys = append(keys, key)
+	}
+	slices.Sort(keys)
+	return keys
 }
