@@ -27,8 +27,8 @@ breaking_change[i] {
 `, content)
 }
 
-func Filter(ctx context.Context, changes []Change, regoRules []string) ([]Change, error) {
-	if len(regoRules) == 0 {
+func Filter(ctx context.Context, changes []Change, rules []string) ([]Change, error) {
+	if len(rules) == 0 {
 		return changes, nil
 	}
 
@@ -48,6 +48,11 @@ func Filter(ctx context.Context, changes []Change, regoRules []string) ([]Change
 	var input interface{}
 	if err := json.Unmarshal(b, &input); err != nil {
 		return nil, err
+	}
+
+	var regoRules []string
+	for _, rule := range rules {
+		regoRules = append(regoRules, buildRule(rule))
 	}
 
 	r := rego.New(

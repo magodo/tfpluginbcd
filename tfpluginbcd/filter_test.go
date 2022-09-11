@@ -27,10 +27,10 @@ func TestFilter(t *testing.T) {
 					IsDelete: true,
 				},
 			},
-			rules: []string{buildRule(`
+			rules: []string{`
 c.kind == "resource"
 c.is_add
-`)},
+`},
 			expect: []Change{
 				ResourceChange{
 					Type:         "foo_resource",
