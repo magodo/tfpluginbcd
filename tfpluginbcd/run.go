@@ -11,8 +11,8 @@ import (
 )
 
 type Opt struct {
-	Rules             []string
-	CustomRuleContent string
+	Rules           []string
+	CustomRuleExprs []string
 }
 
 func Run(ctx context.Context, opath, npath string, opt Opt) (string, error) {
@@ -34,29 +34,40 @@ func Run(ctx context.Context, opath, npath string, opt Opt) (string, error) {
 		return "", fmt.Errorf("unmarshalling the new schema: %v", err)
 	}
 
-	bcs, err := run(ctx, osch, nsch, opt)
+	changes, err := run(ctx, osch, nsch, opt)
 	if err != nil {
 		return "", err
 	}
-
-	var output []string
-	for _, c := range bcs {
-		output = append(output, c.String())
-	}
-	return strings.Join(output, "\n"), nil
+	return strings.Join(changes, "\n"), nil
 }
 
-func run(ctx context.Context, osch, nsch schema.ProviderSchema, opt Opt) ([]Change, error) {
-	var rules []string
+func run(ctx context.Context, osch, nsch schema.ProviderSchema, opt Opt) ([]string, error) {
+	var rules []Rule
 	for _, name := range opt.Rules {
 		rule, ok := Rules[name]
 		if !ok {
 			return nil, fmt.Errorf("undefined rule: %s", name)
 		}
-		rules = append(rules, rule.Expr)
+		rules = append(rules, rule)
 	}
-	if opt.CustomRuleContent != "" {
-		rules = append(rules, opt.CustomRuleContent)
+	for idx, expr := range opt.CustomRuleExprs {
+		rules = append(rules, Rule{
+			ID:   fmt.Sprintf("CUSTOM-%d", idx),
+			Expr: expr,
+		})
 	}
-	return Filter(ctx, Compare(&osch, &nsch), rules)
+	results, err := Filter(ctx, Compare(&osch, &nsch), rules)
+	if err != nil {
+		return nil, fmt.Errorf("filtering: %v", err)
+	}
+
+	var output []string
+	for _, res := range results {
+		if res.Rule == "" {
+			output = append(output, res.Change.String())
+		} else {
+			output = append(output, fmt.Sprintf("[%s] %s", res.Rule, res.Change.String()))
+		}
+	}
+	return output, nil
 }

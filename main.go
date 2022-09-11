@@ -12,9 +12,9 @@ import (
 
 func main() {
 	var (
-		flagAll        bool
-		flagRules      string
-		flagCustomRule string
+		flagAll         bool
+		flagRules       string
+		flagCustomRules cli.StringSlice
 	)
 
 	app := &cli.App{
@@ -55,11 +55,11 @@ func main() {
 						Usage:       "One or more pre-defined rule names (separated by comma)",
 						Destination: &flagRules,
 					},
-					&cli.StringFlag{
+					&cli.StringSliceFlag{
 						Name:        "custom-rule",
 						EnvVars:     []string{"TFPLUGINBCD_CUSTOM_RULE"},
-						Usage:       "Path to a rego file that defines custom breaking change rules",
-						Destination: &flagCustomRule,
+						Usage:       "Custom breaking change rule expression",
+						Destination: &flagCustomRules,
 					},
 				},
 				Action: func(ctx *cli.Context) error {
@@ -83,13 +83,7 @@ func main() {
 							opt.Rules = rules
 						}
 					}
-					if flagCustomRule != "" {
-						b, err := os.ReadFile(flagCustomRule)
-						if err != nil {
-							return fmt.Errorf("reading custom rule: %v", err)
-						}
-						opt.CustomRuleContent = string(b)
-					}
+					opt.CustomRuleExprs = flagCustomRules.Value()
 
 					out, err := tfpluginbcd.Run(ctx.Context, ctx.Args().Get(0), ctx.Args().Get(1), opt)
 					if err != nil {

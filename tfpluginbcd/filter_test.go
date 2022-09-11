@@ -11,8 +11,8 @@ func TestFilter(t *testing.T) {
 	cases := []struct {
 		name    string
 		changes []Change
-		rules   []string
-		expect  []Change
+		rules   []Rule
+		expect  []FilterResult
 	}{
 		{
 			name: "Resoruce is added",
@@ -27,15 +27,23 @@ func TestFilter(t *testing.T) {
 					IsDelete: true,
 				},
 			},
-			rules: []string{`
+			rules: []Rule{
+				{
+					ID: "CUSTOM",
+					Expr: `
 c.kind == "resource"
 c.is_add
-`},
-			expect: []Change{
-				ResourceChange{
-					Type:         "foo_resource",
-					IsDataSource: false,
-					IsAdd:        true,
+`,
+				},
+			},
+			expect: []FilterResult{
+				{
+					Rule: "CUSTOM",
+					Change: ResourceChange{
+						Type:         "foo_resource",
+						IsDataSource: false,
+						IsAdd:        true,
+					},
 				},
 			},
 		},
