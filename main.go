@@ -8,6 +8,7 @@ import (
 
 	"github.com/magodo/tfpluginbcd/tfpluginbcd"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/exp/slices"
 )
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 			},
 			{
 				Name:  "run",
-				Usage: "Run the breaking change detector",
+				Usage: "Run the breaking change detector and show breaking changes (all changes will be shown if no option is specified).",
 				Flags: []cli.Flag{
 					&cli.BoolFlag{
 						Name:        "all",
@@ -73,6 +74,7 @@ func main() {
 						for name := range tfpluginbcd.Rules {
 							allRules = append(allRules, name)
 						}
+						slices.Sort(allRules)
 						opt.Rules = allRules
 					} else {
 						if flagRules != "" {
