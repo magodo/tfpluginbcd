@@ -47,19 +47,16 @@ func Run(ctx context.Context, opath, npath string, opt Opt) (string, error) {
 }
 
 func run(ctx context.Context, osch, nsch schema.ProviderSchema, opt Opt) ([]Change, error) {
-	// Building rego module
-	var regoModule string
+	var regoRules []string
 	for _, name := range opt.Rules {
 		rule, ok := Rules[name]
 		if !ok {
 			return nil, fmt.Errorf("undefined rule: %s", name)
 		}
-		regoModule += buildRule(rule.Expr)
+		regoRules = append(regoRules, buildRule(rule.Expr))
 	}
 	if opt.CustomRuleContent != "" {
-		regoModule += buildRule(opt.CustomRuleContent)
+		regoRules = append(regoRules, buildRule(opt.CustomRuleContent))
 	}
-	regoModule = buildRegoModule(regoModule)
-
-	return Filter(ctx, Compare(&osch, &nsch), regoModule)
+	return Filter(ctx, Compare(&osch, &nsch), regoRules)
 }

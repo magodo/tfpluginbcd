@@ -1,25 +1,5 @@
 package tfpluginbcd
 
-import "fmt"
-
-func buildRegoModule(content string) string {
-	return fmt.Sprintf(`package provider
-
-import future.keywords.in
-
-%s
-`, content)
-}
-
-func buildRule(content string) string {
-	return fmt.Sprintf(`
-breaking_change[i] {
-    some i, c in input.changes
-	%s
-}
-`, content)
-}
-
 type Rule struct {
 	ID          string
 	Description string

@@ -67,10 +67,6 @@ func main() {
 						return fmt.Errorf("expected two args")
 					}
 
-					var rules []string
-					for _, rule := range strings.Split(flagRules, ",") {
-						rules = append(rules, rule)
-					}
 					var opt tfpluginbcd.Opt
 					if flagAll {
 						var allRules []string
@@ -79,7 +75,13 @@ func main() {
 						}
 						opt.Rules = allRules
 					} else {
-						opt.Rules = rules
+						if flagRules != "" {
+							var rules []string
+							for _, rule := range strings.Split(flagRules, ",") {
+								rules = append(rules, strings.TrimSpace(rule))
+							}
+							opt.Rules = rules
+						}
 					}
 					if flagCustomRule != "" {
 						b, err := os.ReadFile(flagCustomRule)

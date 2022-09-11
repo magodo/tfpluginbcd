@@ -11,7 +11,7 @@ func TestFilter(t *testing.T) {
 	cases := []struct {
 		name    string
 		changes []Change
-		rule    string
+		rules   []string
 		expect  []Change
 	}{
 		{
@@ -27,10 +27,10 @@ func TestFilter(t *testing.T) {
 					IsDelete: true,
 				},
 			},
-			rule: `
+			rules: []string{buildRule(`
 c.kind == "resource"
 c.is_add
-`,
+`)},
 			expect: []Change{
 				ResourceChange{
 					Type:         "foo_resource",
@@ -43,7 +43,7 @@ c.is_add
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			actual, err := Filter(context.TODO(), tt.changes, buildRegoModule(buildRule(tt.rule)))
+			actual, err := Filter(context.TODO(), tt.changes, tt.rules)
 			require.NoError(t, err)
 			require.Equal(t, tt.expect, actual)
 		})

@@ -3,11 +3,35 @@ package tfpluginbcd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"strings"
 
 	"github.com/open-policy-agent/opa/rego"
 )
 
-func Filter(ctx context.Context, changes []Change, regoModule string) ([]Change, error) {
+func buildRegoModule(content string) string {
+	return fmt.Sprintf(`package provider
+
+import future.keywords.in
+
+%s
+`, content)
+}
+
+func buildRule(content string) string {
+	return fmt.Sprintf(`
+breaking_change[i] {
+    some i, c in input.changes
+	%s
+}
+`, content)
+}
+
+func Filter(ctx context.Context, changes []Change, regoRules []string) ([]Change, error) {
+	if len(regoRules) == 0 {
+		return changes, nil
+	}
+
 	// Turn the changes from an array to an object, as rego only process on json object as input.
 	type ChangeSet struct {
 		Changes []Change `json:"changes"`
@@ -28,7 +52,7 @@ func Filter(ctx context.Context, changes []Change, regoModule string) ([]Change,
 
 	r := rego.New(
 		rego.Query("data.provider.breaking_change"),
-		rego.Module("rules", regoModule))
+		rego.Module("rules", buildRegoModule(strings.Join(regoRules, "\n"))))
 
 	query, err := r.PrepareForEval(ctx)
 	if err != nil {
